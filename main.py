@@ -63,12 +63,11 @@ def create_task(task_data: TaskCreate):
     tasks.append(new_task)
     return new_task
 
-# Stage 4: Task update karna (PUT)
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, task_data: TaskUpdate):
     for task in tasks:
         if task["id"] == task_id:
-            # Agar title provide kiya gaya hai toh check karein khali na ho
+          
             if task_data.title is not None:
                 cleaned_title = task_data.title.strip()
                 if not cleaned_title:
@@ -78,7 +77,6 @@ def update_task(task_id: int, task_data: TaskUpdate):
                     )
                 task["title"] = cleaned_title
             
-            # Agar done status provide kiya gaya hai toh update karein
             if task_data.done is not None:
                 task["done"] = task_data.done
                 
@@ -89,13 +87,12 @@ def update_task(task_id: int, task_data: TaskUpdate):
         detail=f"Task {task_id} not found"
     )
 
-# Stage 4: Task delete karna (DELETE)
 @app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: int):
     for index, task in enumerate(tasks):
         if task["id"] == task_id:
             tasks.pop(index)
-            return None  # 204 No Content returns empty body
+            return None
             
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
