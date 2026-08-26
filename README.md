@@ -56,3 +56,6 @@ content-type: application/json
 ## The Mortality Experiment (Why In-Memory Data Wipes)
 When tasks are created or deleted, data lives strictly in server memory (Python runtime heap/RAM). Restarting Uvicorn causes the memory space to be cleared and reinitialized with default seed data. This demonstrates why production backends require persistent database storage (SQL/NoSQL).
 
+## 📸 Swagger UI Interactive Documentation
+
+![Swagger UI Documentation](./swagger-ui.png)
