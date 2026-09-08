@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:15
+    network_mode: "host"
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: todo_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d todo_db -h 127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    network_mode: "host"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://myuser:secretpassword@127.0.0.1:5432/todo_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

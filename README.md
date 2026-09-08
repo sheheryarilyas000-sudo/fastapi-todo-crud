@@ -1,3 +1,25 @@
+# 🚀 Assignment 3: PostgreSQL & Docker Migration
+
+A persistent, production-ready RESTful Task Management API built with Python, FastAPI, and PostgreSQL running in a Docker container.
+
+## 📌 Architectural Evolution Proof
+I successfully replaced the SQLite repository with a PostgreSQL repository (`PostgresTaskRepository`). As required, my service logic and API routes in `main.py` remained completely unchanged during this swap. The architecture proves that swapping the storage layer only requires changing the repository implementation.
+
+* **Database Setup:** PostgreSQL is running in a Docker container alongside the FastAPI web application using `docker-compose.yml`.
+* **Connection Management:** The connection string is securely loaded from a `.env` file (which is gitignored). A `.env.example` file is committed to the repository for reference.
+
+## 💾 Persistence Proof
+I proved data persistence across restarts by performing these steps:
+1. Created a new task via the Swagger API (`POST /tasks`).
+2. Verified the task was saved (`GET /tasks`).
+3. Stopped and removed the application and database containers using `docker compose down`.
+4. Restarted the entire stack using `docker compose up -d`.
+5. Sent another `GET /tasks` request and successfully retrieved the exact same task. The data survived the container restart because of the configured Docker volume (`postgres_data`).
+
+---
+
+# 🕰️ Past Implementations (History)
+
 # FastAPI To-Do CRUD API (In-Memory to SQLite Migration)
 
 A persistent, production-ready RESTful Task Management API built with Python, FastAPI, and SQLite. Originally developed as an in-memory prototype, this project demonstrates the architectural evolution from ephemeral RAM storage to disk-persisted relational database management using raw SQL.
