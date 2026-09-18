@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from pydantic import BaseModel
 from database import PostgresTaskRepository
 import os
@@ -19,7 +19,6 @@ repo: Optional[PostgresTaskRepository] = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global repo
-
     repo = PostgresTaskRepository()
     yield
 
@@ -32,30 +31,35 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
 
+class UserCredentials(BaseModel):
+    email: str
+    password: str
+
 @app.get("/")
 def get_root():
-    return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks"]}
+    return {"name": "Task API", "version": "1.0", "endpoints": ["/tasks", "/auth/signup", "/auth/login"]}
 
 @app.get("/health")
 def get_health():
     return {"status": "ok"}
 
-@app.get("/tasks")
-def get_all_tasks():
-    return repo.get_all_tasks()
+# Stage 2: Public Route
+@app.get("/public/info")
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
 
-@app.get("/tasks/{task_id}")
-def get_task(task_id: int):
-    task = repo.get_task(task_id)
-    if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
-    return dict(task)
-# User se email aur password lene ke liye structure
-class UserCredentials(BaseModel):
-    email: str
-    password: str
+# Stage 2: Protected Route (Unverified Token Check)
+@app.get("/protected/profile")
+def protected_profile(request: Request):
+    auth_header = request.headers.get("Authorization")
+    
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Access token required")
+    
+    token = auth_header.split(" ")[1]
+    return {"message": "You reached the protected route!", "token_received": token}
 
-# 1. Sign Up Route
+# Sign Up Route
 @app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
 def signup(user: UserCredentials):
     if not user.email or not user.password:
@@ -70,10 +74,9 @@ def signup(user: UserCredentials):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# 2. Log In Route
+# Log In Route
 @app.post("/auth/login", status_code=status.HTTP_200_OK)
 def login(user: UserCredentials):
-    # Validation
     if not user.email or not user.password:
         raise HTTPException(status_code=400, detail="Email and password are required")
     
@@ -85,6 +88,17 @@ def login(user: UserCredentials):
         return response
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid login credentials")
+
+@app.get("/tasks")
+def get_all_tasks():
+    return repo.get_all_tasks()
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: int):
+    task = repo.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
+    return dict(task)
 
 @app.post("/tasks", status_code=status.HTTP_201_CREATED)
 def create_task(task_data: TaskCreate):
