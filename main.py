@@ -50,6 +50,41 @@ def get_task(task_id: int):
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
     return dict(task)
+# User se email aur password lene ke liye structure
+class UserCredentials(BaseModel):
+    email: str
+    password: str
+
+# 1. Sign Up Route
+@app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
+def signup(user: UserCredentials):
+    if not user.email or not user.password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    try:
+        response = supabase.auth.sign_up({
+            "email": user.email,
+            "password": user.password
+        })
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# 2. Log In Route
+@app.post("/auth/login", status_code=status.HTTP_200_OK)
+def login(user: UserCredentials):
+    # Validation
+    if not user.email or not user.password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+    
+    try:
+        response = supabase.auth.sign_in_with_password({
+            "email": user.email,
+            "password": user.password
+        })
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid login credentials")
 
 @app.post("/tasks", status_code=status.HTTP_201_CREATED)
 def create_task(task_data: TaskCreate):
