@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from typing import Optional
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import FastAPI, HTTPException, status, Request, Header
 from pydantic import BaseModel
 from database import PostgresTaskRepository
 import os
@@ -13,6 +15,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+security = HTTPBearer()
 
 repo: Optional[PostgresTaskRepository] = None
 
@@ -43,21 +46,25 @@ def get_root():
 def get_health():
     return {"status": "ok"}
 
-# Stage 2: Public Route
+# Public Route
 @app.get("/public/info")
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-# Stage 2: Protected Route (Unverified Token Check)
+# Protected Route with Real Token Verification (Pro Level)
 @app.get("/protected/profile")
-def protected_profile(request: Request):
-    auth_header = request.headers.get("Authorization")
-    
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Access token required")
-    
-    token = auth_header.split(" ")[1]
-    return {"message": "You reached the protected route!", "token_received": token}
+def protected_profile(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials 
+
+    try:
+        user_response = supabase.auth.get_user(token)
+        return {
+            "message": "Token successfully verified by Supabase!",
+            "user_email": user_response.user.email,
+            "user_id": user_response.user.id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # Sign Up Route
 @app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
