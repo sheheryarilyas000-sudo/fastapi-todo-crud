@@ -51,20 +51,32 @@ def get_health():
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-# Protected Route with Real Token Verification (Pro Level)
-@app.get("/protected/profile")
-def protected_profile(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials 
-
+# Reusable Middleware Guard
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
     try:
         user_response = supabase.auth.get_user(token)
-        return {
-            "message": "Token successfully verified by Supabase!",
-            "user_email": user_response.user.email,
-            "user_id": user_response.user.id
-        }
+        return user_response.user
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+# Protected Profile
+@app.get("/protected/profile")
+def protected_profile(current_user = Depends(get_current_user)):
+    return {
+        "message": "Token successfully verified by Supabase!",
+        "user_email": current_user.email,
+        "user_id": current_user.id
+    }
+
+# Logout Route
+@app.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(current_user = Depends(get_current_user)):
+    try:
+        supabase.auth.sign_out()
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Sign Up Route
 @app.post("/auth/signup", status_code=status.HTTP_201_CREATED)
